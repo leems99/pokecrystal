@@ -188,8 +188,8 @@ ScriptCommandTable:
 	dw Script_changeblock                ; 7a
 	dw Script_reloadmap                  ; 7b
 	dw Script_reloadmappart              ; 7c
-	dw Script_writecmdqueue              ; 7d
-	dw Script_delcmdqueue                ; 7e
+	dw Script_usestonetable              ; 7d
+	dw Script_clearstonetable            ; 7e
 	dw Script_playmusic                  ; 7f
 	dw Script_encountermusic             ; 80
 	dw Script_musicfadeout               ; 81
@@ -454,6 +454,8 @@ Script_verbosegiveitem:
 	ld de, wStringBuffer1
 	ld a, STRING_BUFFER_4
 	call CopyConvertedText
+	ld de, wStringBuffer4 + STRLEN("TM##")
+	call AppendTMHMMoveName
 	ld b, BANK(GiveItemScript)
 	ld de, GiveItemScript
 	jp ScriptCall
@@ -502,6 +504,8 @@ Script_verbosegiveitemvar:
 	ld de, wStringBuffer1
 	ld a, STRING_BUFFER_4
 	call CopyConvertedText
+	ld de, wStringBuffer4 + STRLEN("TM##")
+	call AppendTMHMMoveName
 	ld b, BANK(GiveItemScript)
 	ld de, GiveItemScript
 	jp ScriptCall
@@ -2113,25 +2117,17 @@ Script_dontrestartmapmusic:
 	ld [wDontPlayMapMusicOnReload], a
 	ret
 
-Script_writecmdqueue:
+Script_usestonetable:
 	call GetScriptByte
-	ld e, a
+	ld [wStoneTableAddress], a
 	call GetScriptByte
-	ld d, a
-	ld a, [wScriptBank]
-	ld b, a
-	farcall WriteCmdQueue ; no need to farcall
+	ld [wStoneTableAddress+1], a
 	ret
 
-Script_delcmdqueue:
+Script_clearstonetable:
 	xor a
-	ld [wScriptVar], a
-	call GetScriptByte
-	ld b, a
-	farcall DelCmdQueue ; no need to farcall
-	ret c
-	ld a, TRUE
-	ld [wScriptVar], a
+	ld [wStoneTableAddress], a
+	ld [wStoneTableAddress+1], a
 	ret
 
 Script_changemapblocks:
@@ -2360,3 +2356,30 @@ Script_checkver_duplicate: ; unreferenced
 
 .gs_version
 	db GS_VERSION
+
+AppendTMHMMoveName::
+; a = item ID
+	ld a, [wNamedObjectIndex]
+	cp TM01
+	ret c
+; save item name buffer
+	push de
+; a = TM/HM number
+	ld c, a
+	farcall GetTMHMNumber
+	ld a, c
+; a = move ID
+	ld [wTempTMHM], a
+	predef GetTMHMMove
+	ld a, [wTempTMHM]
+; wStringBuffer1 = move name
+	ld [wNamedObjectIndex], a
+	call GetMoveName
+; hl = item name buffer
+	pop hl
+; append wStringBuffer1 to item name buffer
+	ld [hl], " "
+	inc hl
+	ld de, wStringBuffer1
+	jp CopyName2
+	
