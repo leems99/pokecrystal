@@ -388,9 +388,9 @@ MartAskPurchaseQuantity:
 	jp c, .AlreadyHaveTM
 	farcall GetItemPrice
 	ld a, d
-	ld [wBuffer1], a
+	ld [wStringBuffer1], a
 	ld a, e
-	ld [wBuffer2], a
+	ld [wStringBuffer2], a
 	ld a, 1
 	ld [wItemQuantityChange], a
 	ld a, 99
